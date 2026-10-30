@@ -53,10 +53,10 @@ Both tests immediately change and save active crafts and hideout upgrades on the
 
 ## Build
 
-Build against your SPT server runtime:
+From the repository root, build and package the install-ready `SPT_Runtime` folder with:
 
 ```powershell
-dotnet build HideoutTimeRaid.csproj -c Release -p:SPTRuntimePath="D:\Random Games\SPT\SPT_Runtime"
+.\tools\Build-Release.ps1 -SPTRuntimePath "D:\Path\To\SPT\SPT_Runtime"
 ```
 
-The build outputs `HideoutTimeRaid.dll` and `config.json` under `bin\Release\net10.0`. Copy both into this mod's root folder. SPT searches only the mod root for assemblies.
+The script builds this project against the supplied SPT runtime and creates a versioned ZIP under `dist`. The ZIP contains the compiled assembly, config, manifest, this readme, and web UI at the paths SPT expects.

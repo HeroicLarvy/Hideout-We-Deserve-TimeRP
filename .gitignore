@@ -1,3 +1,4 @@
 **/bin/
 **/obj/
-Hideout-We-Deserve-TimeRP-1.4.0.zip
+dist/
+*.zip
