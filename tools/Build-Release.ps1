@@ -6,8 +6,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
-$sourceDirectory = Join-Path $repositoryRoot "src\HideoutTimeRaid"
-$projectPath = Join-Path $sourceDirectory "HideoutTimeRaid.csproj"
+$sourceDirectory = Join-Path $repositoryRoot "src\HideoutWeDeserveTimeRP"
+$projectPath = Join-Path $sourceDirectory "HideoutWeDeserveTimeRP.csproj"
 $metadataPath = Join-Path $sourceDirectory "package.json"
 $manifest = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
 $sdkVersion = (& dotnet --version).Trim()
@@ -30,13 +30,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $buildDirectory = Join-Path $sourceDirectory "bin\Release\net10.0"
-$builtAssembly = Join-Path $buildDirectory "HideoutTimeRaid.dll"
+$builtAssembly = Join-Path $buildDirectory "HideoutWeDeserveTimeRP.dll"
 if (-not (Test-Path -LiteralPath $builtAssembly)) {
-    throw "The build succeeded but did not produce HideoutTimeRaid.dll."
+    throw "The build succeeded but did not produce HideoutWeDeserveTimeRP.dll."
 }
 
 $stagingRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("HideoutWeDeserveTimeRP-" + [guid]::NewGuid().ToString("N"))
-$modRoot = Join-Path $stagingRoot "SPT_Runtime\user\mods\HideoutTimeRaid"
+$modRoot = Join-Path $stagingRoot "SPT_Runtime\user\mods\HideoutWeDeserveTimeRP"
 $outputDirectory = Join-Path $repositoryRoot "dist"
 $archivePath = Join-Path $outputDirectory "Hideout-We-Deserve-TimeRP-$($manifest.version).zip"
 
@@ -47,7 +47,6 @@ try {
     Copy-Item -LiteralPath $builtAssembly -Destination $modRoot
     Copy-Item -LiteralPath (Join-Path $sourceDirectory "config.json") -Destination $modRoot
     Copy-Item -LiteralPath $metadataPath -Destination $modRoot
-    Copy-Item -LiteralPath (Join-Path $sourceDirectory "README.md") -Destination $modRoot
     Copy-Item -LiteralPath (Join-Path $sourceDirectory "wwwroot\index.html") -Destination (Join-Path $modRoot "wwwroot")
 
     if (Test-Path -LiteralPath $archivePath) {
@@ -64,13 +63,12 @@ try {
 
     $archive = [System.IO.Compression.ZipFile]::OpenRead($archivePath)
     try {
-        $entries = @($archive.Entries | ForEach-Object FullName)
+        $entries = @($archive.Entries | ForEach-Object { $_.FullName.Replace("\", "/") })
         $requiredEntries = @(
-            "SPT_Runtime/user/mods/HideoutTimeRaid/HideoutTimeRaid.dll",
-            "SPT_Runtime/user/mods/HideoutTimeRaid/config.json",
-            "SPT_Runtime/user/mods/HideoutTimeRaid/package.json",
-            "SPT_Runtime/user/mods/HideoutTimeRaid/README.md",
-            "SPT_Runtime/user/mods/HideoutTimeRaid/wwwroot/index.html"
+            "SPT_Runtime/user/mods/HideoutWeDeserveTimeRP/HideoutWeDeserveTimeRP.dll",
+            "SPT_Runtime/user/mods/HideoutWeDeserveTimeRP/config.json",
+            "SPT_Runtime/user/mods/HideoutWeDeserveTimeRP/package.json",
+            "SPT_Runtime/user/mods/HideoutWeDeserveTimeRP/wwwroot/index.html"
         )
 
         foreach ($entry in $requiredEntries) {
@@ -81,6 +79,10 @@ try {
 
         if ($entries -match "(^|/)(bin|obj)/|\.csproj$|\.cs$") {
             throw "The release ZIP unexpectedly contains source files or build intermediates."
+        }
+
+        if ($entries | Where-Object { [System.IO.Path]::GetFileName($_) -match "(?i)^readme(?:\..*)?$" }) {
+            throw "The release ZIP unexpectedly contains a README."
         }
     }
     finally {

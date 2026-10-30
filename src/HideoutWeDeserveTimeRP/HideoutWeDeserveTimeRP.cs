@@ -20,11 +20,11 @@ using SPTarkov.Server.Web;
 using Range = SemanticVersioning.Range;
 using Version = SemanticVersioning.Version;
 
-namespace HideoutTimeRaid;
+namespace HideoutWeDeserveTimeRP;
 
-public sealed class HideoutTimeRaidMetadata : IModMetadata, IModBlazorMetadata
+public sealed class HideoutWeDeserveTimeRPMetadata : IModMetadata, IModBlazorMetadata
 {
-    public string ModGuid { get; init; } = "com.garon.hideouttimeraid";
+    public string ModGuid { get; init; } = "com.garon.hideoutwedeservetimerp";
     public string Name { get; init; } = "Hideout We Deserve - TimeRP";
     public string Author { get; init; } = "HeroicLarvy";
     public List<string>? Contributors { get; init; }
@@ -35,7 +35,7 @@ public sealed class HideoutTimeRaidMetadata : IModMetadata, IModBlazorMetadata
     public Dictionary<string, Range>? ModDependencies { get; init; }
     public string? Url { get; init; }
     public string License { get; init; } = "MIT";
-    public string? WWWRootUrl { get; init; } = "HideoutTimeRaid";
+    public string? WWWRootUrl { get; init; } = "HideoutWeDeserveTimeRP";
     public string? HomePage { get; init; } = "/HWDTimeRP";
     public string? HomePageDescription { get; init; } = "Edit Hideout We Deserve - TimeRP settings";
 }
@@ -58,7 +58,7 @@ public sealed class RaidTimeConfig
     public bool Debug { get; init; }
 }
 
-public sealed record HideoutTimeRaidProgressionResult(
+public sealed record HideoutWeDeserveTimeRPProgressionResult(
     [property: JsonPropertyName("raidMinutes")] double RaidMinutes,
     [property: JsonPropertyName("progressMinutes")] double ProgressMinutes,
     [property: JsonPropertyName("craftsAdvanced")] int CraftsAdvanced,
@@ -66,30 +66,30 @@ public sealed record HideoutTimeRaidProgressionResult(
     [property: JsonPropertyName("mapId")] string MapId
 );
 
-public sealed record HideoutTimeRaidTestRequest : IRequestData
+public sealed record HideoutWeDeserveTimeRPTestRequest : IRequestData
 {
     [JsonPropertyName("profileId")]
     public string ProfileId { get; init; } = string.Empty;
 }
 
-public sealed record HideoutTimeRaidProfileOption(
+public sealed record HideoutWeDeserveTimeRPProfileOption(
     [property: JsonPropertyName("profileId")] string ProfileId,
     [property: JsonPropertyName("username")] string Username
 );
 
 [Injectable(TypePriority = OnLoadOrder.PostLoad + 1)]
-public sealed class HideoutTimeRaidMod(
-    ISptLogger<HideoutTimeRaidMod> logger,
+public sealed class HideoutWeDeserveTimeRPMod(
+    ISptLogger<HideoutWeDeserveTimeRPMod> logger,
     ProfileHelper profileHelper,
     SaveServer saveServer
 ) : IOnLoad
 {
-    private static HideoutTimeRaidMod? _instance;
+    private static HideoutWeDeserveTimeRPMod? _instance;
     private static Harmony? _harmony;
     private RaidTimeConfig _config = new();
     private string? _configPath;
 
-    public static HideoutTimeRaidMod Instance =>
+    public static HideoutWeDeserveTimeRPMod Instance =>
         _instance ?? throw new InvalidOperationException("Hideout We Deserve - TimeRP was not initialized.");
 
     public Task OnLoadAsync(CancellationToken cancellationToken)
@@ -102,7 +102,7 @@ public sealed class HideoutTimeRaidMod(
         _config = LoadConfig(_configPath);
 
         _instance = this;
-        _harmony = new Harmony("com.garon.hideouttimeraid");
+        _harmony = new Harmony("com.garon.hideoutwedeservetimerp");
         MethodInfo endLocalRaidMethod = AccessTools.Method(
             typeof(LocationLifecycleService),
             nameof(LocationLifecycleService.EndLocalRaidAsync));
@@ -115,7 +115,7 @@ public sealed class HideoutTimeRaidMod(
 
         _harmony.Patch(
             endLocalRaidMethod,
-            postfix: new HarmonyMethod(typeof(HideoutTimeRaidMod), nameof(AfterEndLocalRaid)));
+            postfix: new HarmonyMethod(typeof(HideoutWeDeserveTimeRPMod), nameof(AfterEndLocalRaid)));
 
         logger.Info(
             $"Hideout We Deserve - TimeRP loaded: { _config.BaseTimeMultiplier:0.##}x base, " +
@@ -217,7 +217,7 @@ public sealed class HideoutTimeRaidMod(
         EndLocalRaidRequestData request
     )
     {
-        HideoutTimeRaidMod instance = _instance
+        HideoutWeDeserveTimeRPMod instance = _instance
             ?? throw new InvalidOperationException("Hideout We Deserve - TimeRP was not initialized.");
         __result = instance.ApplyAfterRaidAsync(__result, sessionId, request);
     }
@@ -274,7 +274,7 @@ public sealed class HideoutTimeRaidMod(
         await ApplyRaidProgressionAsync(sessionId, mapKey, duration);
     }
 
-    public Task<HideoutTimeRaidProgressionResult> SimulateRaidProgressionAsync(
+    public Task<HideoutWeDeserveTimeRPProgressionResult> SimulateRaidProgressionAsync(
         MongoId sessionId,
         string mapId,
         double raidSeconds
@@ -283,7 +283,7 @@ public sealed class HideoutTimeRaidMod(
         return ApplyRaidProgressionAsync(sessionId, NormalizeMapId(mapId), raidSeconds);
     }
 
-    private async Task<HideoutTimeRaidProgressionResult> ApplyRaidProgressionAsync(
+    private async Task<HideoutWeDeserveTimeRPProgressionResult> ApplyRaidProgressionAsync(
         MongoId sessionId,
         string mapId,
         double duration
@@ -305,7 +305,7 @@ public sealed class HideoutTimeRaidMod(
         long progressSeconds = checked((long)Math.Round(baseSeconds + dangerSeconds, MidpointRounding.AwayFromZero));
         if (progressSeconds <= 0)
         {
-            return new HideoutTimeRaidProgressionResult(duration / 60, 0, 0, 0, mapId);
+            return new HideoutWeDeserveTimeRPProgressionResult(duration / 60, 0, 0, 0, mapId);
         }
 
         var pmcProfile = profileHelper.GetPmcProfile(sessionId);
@@ -351,7 +351,7 @@ public sealed class HideoutTimeRaidMod(
 
         await saveServer.SaveProfileAsync(sessionId);
 
-        var result = new HideoutTimeRaidProgressionResult(
+        var result = new HideoutWeDeserveTimeRPProgressionResult(
             duration / 60,
             progressSeconds / 60.0,
             craftsAdvanced,
@@ -383,9 +383,9 @@ public sealed class HideoutTimeRaidMod(
 [ApiController]
 [Authorize]
 [Route("HWDTimeRP")]
-public sealed class HideoutTimeRaidTestController(
+public sealed class HideoutWeDeserveTimeRPTestController(
     SaveServer saveServer,
-    ISptLogger<HideoutTimeRaidTestController> logger
+    ISptLogger<HideoutWeDeserveTimeRPTestController> logger
 ) : ControllerBase
 {
     [HttpGet]
@@ -400,7 +400,7 @@ public sealed class HideoutTimeRaidTestController(
     [HttpGet("api/config")]
     public ActionResult<RaidTimeConfig> GetConfig()
     {
-        return Ok(HideoutTimeRaidMod.Instance.GetConfig());
+        return Ok(HideoutWeDeserveTimeRPMod.Instance.GetConfig());
     }
 
     [HttpPut("api/config")]
@@ -413,7 +413,7 @@ public sealed class HideoutTimeRaidTestController(
 
         try
         {
-            return Ok(HideoutTimeRaidMod.Instance.SaveConfig(config));
+            return Ok(HideoutWeDeserveTimeRPMod.Instance.SaveConfig(config));
         }
         catch (InvalidDataException exception)
         {
@@ -422,10 +422,10 @@ public sealed class HideoutTimeRaidTestController(
     }
 
     [HttpGet("api/profiles")]
-    public ActionResult<HideoutTimeRaidProfileOption[]> GetProfiles()
+    public ActionResult<HideoutWeDeserveTimeRPProfileOption[]> GetProfiles()
     {
         var profiles = saveServer.GetProfiles()
-            .Select(profile => new HideoutTimeRaidProfileOption(
+            .Select(profile => new HideoutWeDeserveTimeRPProfileOption(
                 profile.Key.ToString(),
                 profile.Value.ProfileInfo?.Username ?? profile.Key.ToString()
             ))
@@ -436,24 +436,24 @@ public sealed class HideoutTimeRaidTestController(
     }
 
     [HttpPost("api/test/forty-seconds")]
-    public Task<IActionResult> SimulateBaseProgressionAsync([FromBody] HideoutTimeRaidTestRequest info)
+    public Task<IActionResult> SimulateBaseProgressionAsync([FromBody] HideoutWeDeserveTimeRPTestRequest info)
     {
         return SimulateProgressionAsync(info, "factory", 40);
     }
 
     [HttpPost("api/test/woods-forty-minutes")]
-    public Task<IActionResult> SimulateWoodsProgressionAsync([FromBody] HideoutTimeRaidTestRequest info)
+    public Task<IActionResult> SimulateWoodsProgressionAsync([FromBody] HideoutWeDeserveTimeRPTestRequest info)
     {
         return SimulateProgressionAsync(info, "woods", 40 * 60);
     }
 
     private async Task<IActionResult> SimulateProgressionAsync(
-        HideoutTimeRaidTestRequest info,
+        HideoutWeDeserveTimeRPTestRequest info,
         string mapId,
         double raidSeconds
     )
     {
-        if (!HideoutTimeRaidMod.Instance.DebugEnabled)
+        if (!HideoutWeDeserveTimeRPMod.Instance.DebugEnabled)
         {
             return NotFound();
         }
@@ -473,8 +473,8 @@ public sealed class HideoutTimeRaidTestController(
         }
 
         logger.Warning($"Web UI requested a real timer test for profile {profileId} on {mapId}.");
-        HideoutTimeRaidProgressionResult result =
-            await HideoutTimeRaidMod.Instance.SimulateRaidProgressionAsync(profileId, mapId, raidSeconds);
+        HideoutWeDeserveTimeRPProgressionResult result =
+            await HideoutWeDeserveTimeRPMod.Instance.SimulateRaidProgressionAsync(profileId, mapId, raidSeconds);
         return Ok(result);
     }
 }

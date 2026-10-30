@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <AssemblyName>HideoutTimeRaid</AssemblyName>
-    <RootNamespace>HideoutTimeRaid</RootNamespace>
+    <AssemblyName>HideoutWeDeserveTimeRP</AssemblyName>
+    <RootNamespace>HideoutWeDeserveTimeRP</RootNamespace>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
