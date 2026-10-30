@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>HideoutTimeRaid</AssemblyName>
+    <RootNamespace>HideoutTimeRaid</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <SPTRuntimePath Condition="'$(SPTRuntimePath)' == ''">D:\Random Games\SPT\SPT_Runtime</SPTRuntimePath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>$(SPTRuntimePath)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SemanticVersioning">
+      <HintPath>$(SPTRuntimePath)\SemanticVersioning.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SPTarkov.Common">
+      <HintPath>$(SPTRuntimePath)\SPTarkov.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SPTarkov.DI">
+      <HintPath>$(SPTRuntimePath)\SPTarkov.DI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SPTarkov.Server.Core">
+      <HintPath>$(SPTRuntimePath)\SPTarkov.Server.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SPTarkov.Server.Web">
+      <HintPath>$(SPTRuntimePath)\SPTarkov.Server.Web.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="config.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="ValidateSPTRuntimePath" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(SPTRuntimePath)\SPTarkov.Server.Core.dll')" Text="SPTRuntimePath must point to the SPT_Runtime folder containing SPTarkov.Server.Core.dll." />
+    <Error Condition="!Exists('$(SPTRuntimePath)\0Harmony.dll')" Text="SPTRuntimePath does not contain 0Harmony.dll." />
+  </Target>
+</Project>

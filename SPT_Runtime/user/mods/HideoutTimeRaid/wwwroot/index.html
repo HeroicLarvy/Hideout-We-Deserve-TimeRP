@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hideout We Deserve - TimeRP</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font: 16px/1.5 system-ui, sans-serif;
+      background: #17191c;
+      color: #eceff1;
+    }
+    body {
+      box-sizing: border-box;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 20px;
+    }
+    h1 { margin-top: 0; }
+    .panel {
+      padding: 20px;
+      border: 1px solid #444a50;
+      border-radius: 8px;
+      background: #22262a;
+    }
+    h2 { margin-top: 0; }
+    label { display: block; margin-bottom: 8px; font-weight: 600; }
+    select, input, button {
+      box-sizing: border-box;
+      min-height: 42px;
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      border: 1px solid #626a72;
+      border-radius: 5px;
+      font: inherit;
+    }
+    select, input { width: 100%; background: #17191c; color: inherit; }
+    button {
+      width: 100%;
+      border: 0;
+      background: #b7c98a;
+      color: #17191c;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .warning { color: #f0c674; }
+    #status { min-height: 1.5em; overflow-wrap: anywhere; }
+    .muted { color: #b0b7bd; }
+    .config-panel { margin-bottom: 20px; }
+    .map-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 180px) auto; gap: 12px; align-items: end; }
+    .map-row label { overflow-wrap: anywhere; }
+    .map-row button { width: auto; min-width: 90px; }
+    .secondary { background: #55616b; color: #fff; }
+    .status-error { color: #ff8a80; }
+    .status-success { color: #b7c98a; }
+    @media (max-width: 560px) {
+      .map-row { grid-template-columns: 1fr 100px; }
+      .map-row button { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Hideout We Deserve - TimeRP</h1>
+  <div class="panel config-panel">
+    <h2>Configuration</h2>
+    <p class="muted">Values are validated and saved to this mod's config.json. Changes take effect immediately.</p>
+    <form id="config-form">
+      <label for="base-multiplier">Base time multiplier</label>
+      <input id="base-multiplier" type="number" min="0.01" step="any" required>
+      <label for="danger-threshold">Danger threshold (minutes)</label>
+      <input id="danger-threshold" type="number" min="0" step="any" required>
+      <label for="default-danger">Default map danger multiplier</label>
+      <input id="default-danger" type="number" min="0" step="any" required>
+      <h3>Map danger multipliers</h3>
+      <div id="map-multipliers"></div>
+      <button id="add-map" class="secondary" type="button">Add map multiplier</button>
+      <button id="save-config" type="submit">Save configuration</button>
+    </form>
+    <p id="config-status" role="status" aria-live="polite"></p>
+  </div>
+  <div id="progression-tests" class="panel" hidden>
+    <h2>Progression tests</h2>
+    <p class="warning"><strong>These tests make real, saved changes</strong> to the selected profile's active crafts and hideout upgrades.</p>
+    <label for="profile">Profile</label>
+    <select id="profile" disabled>
+      <option value="">Loading profiles...</option>
+    </select>
+    <button id="refresh" type="button">Refresh profiles</button>
+    <button id="factory" type="button" disabled>Test 40 seconds on Factory</button>
+    <button id="woods" type="button" disabled>Test 40 minutes on Woods</button>
+    <p class="muted">Factory simulates 40 raid seconds. Woods simulates 40 raid minutes and includes the post-15-minute danger multiplier.</p>
+    <p id="status" role="status" aria-live="polite"></p>
+  </div>
+  <script>
+    const profileSelect = document.querySelector("#profile");
+    const factoryButton = document.querySelector("#factory");
+    const woodsButton = document.querySelector("#woods");
+    const status = document.querySelector("#status");
+    const configStatus = document.querySelector("#config-status");
+    const mapMultipliers = document.querySelector("#map-multipliers");
+    const api = "/HWDTimeRP/api";
+    let debugEnabled = false;
+
+    function setStatus(element, message, kind = "") {
+      element.className = kind ? `status-${kind}` : "";
+      element.textContent = message;
+    }
+
+    async function request(path, options = {}) {
+      let response;
+      try {
+        response = await fetch(`${api}${path}`, {
+          credentials: "same-origin",
+          ...options
+        });
+      } catch (error) {
+        throw new Error(`Could not contact the SPT server: ${error.message}`);
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("json")) {
+        if (response.redirected && response.url.toLowerCase().includes("login")) {
+          throw new Error("Sign in to the SPT web panel, then reload this page.");
+        }
+        throw new Error(`The server returned a non-JSON response (${response.status}). Check the ConfigPage URL and restart the SPT server after updating the mod.`);
+      }
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || payload.title || payload.detail || `Request failed (${response.status}).`);
+      }
+      return payload;
+    }
+
+    function addMapRow(mapName, multiplier) {
+      const row = document.createElement("div");
+      row.className = "map-row";
+
+      const nameLabel = document.createElement("label");
+      nameLabel.textContent = "Map ID";
+      const nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.value = mapName;
+      nameInput.required = true;
+      nameLabel.append(nameInput);
+
+      const valueLabel = document.createElement("label");
+      valueLabel.textContent = "Multiplier";
+      const valueInput = document.createElement("input");
+      valueInput.type = "number";
+      valueInput.min = "0";
+      valueInput.step = "any";
+      valueInput.value = multiplier;
+      valueInput.required = true;
+      valueLabel.append(valueInput);
+
+      const removeButton = document.createElement("button");
+      removeButton.type = "button";
+      removeButton.className = "secondary";
+      removeButton.textContent = "Remove";
+      removeButton.addEventListener("click", () => row.remove());
+
+      row.append(nameLabel, valueLabel, removeButton);
+      mapMultipliers.append(row);
+    }
+
+    function showConfig(config) {
+      debugEnabled = config.debug === true;
+      document.querySelector("#progression-tests").hidden = !debugEnabled;
+      document.querySelector("#base-multiplier").value = config.baseTimeMultiplier;
+      document.querySelector("#danger-threshold").value = config.dangerThresholdMinutes;
+      document.querySelector("#default-danger").value = config.defaultDangerMultiplier;
+      mapMultipliers.replaceChildren();
+      for (const [mapName, multiplier] of Object.entries(config.mapDangerMultipliers || {})) {
+        addMapRow(mapName, multiplier);
+      }
+    }
+
+    function readConfigForm() {
+      const mapDangerMultipliers = {};
+      for (const row of mapMultipliers.querySelectorAll(".map-row")) {
+        const [nameInput, multiplierInput] = row.querySelectorAll("input");
+        const mapName = nameInput.value.trim();
+        const normalizedMapName = mapName.toLowerCase();
+        if (!mapName || Object.hasOwn(mapDangerMultipliers, normalizedMapName)) {
+          throw new Error("Map IDs must be non-empty and unique.");
+        }
+        mapDangerMultipliers[mapName] = Number(multiplierInput.value);
+      }
+      return {
+        baseTimeMultiplier: Number(document.querySelector("#base-multiplier").value),
+        dangerThresholdMinutes: Number(document.querySelector("#danger-threshold").value),
+        defaultDangerMultiplier: Number(document.querySelector("#default-danger").value),
+        debug: debugEnabled,
+        mapDangerMultipliers
+      };
+    }
+
+    async function loadConfig() {
+      setStatus(configStatus, "Loading config...");
+      try {
+        showConfig(await request("/config"));
+        setStatus(configStatus, "Configuration loaded.");
+        if (debugEnabled) {
+          await loadProfiles();
+        }
+      } catch (error) {
+        setStatus(configStatus, error.message, "error");
+      }
+    }
+
+    async function saveConfig(event) {
+      event.preventDefault();
+      const saveButton = document.querySelector("#save-config");
+      saveButton.disabled = true;
+      setStatus(configStatus, "Saving configuration...");
+      try {
+        const config = readConfigForm();
+        showConfig(await request("/config", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(config)
+        }));
+        setStatus(configStatus, "Configuration saved. New settings are active.", "success");
+      } catch (error) {
+        setStatus(configStatus, error.message, "error");
+      } finally {
+        saveButton.disabled = false;
+      }
+    }
+
+    async function loadProfiles() {
+      profileSelect.disabled = true;
+      factoryButton.disabled = true;
+      woodsButton.disabled = true;
+      profileSelect.replaceChildren(new Option("Loading profiles...", ""));
+      setStatus(status, "Loading profiles...");
+      try {
+        const profiles = await request("/profiles");
+        if (!Array.isArray(profiles)) {
+          throw new Error("The server returned an unexpected profile list. Restart SPT after updating the mod.");
+        }
+        profileSelect.replaceChildren(new Option("Choose a profile...", ""));
+        for (const profile of profiles) {
+          profileSelect.add(new Option(profile.username, profile.profileId));
+        }
+        profileSelect.disabled = false;
+        setStatus(status, profiles.length ? "Select a profile to run a test." : "No profiles were found.");
+      } catch (error) {
+        profileSelect.replaceChildren(new Option("Could not load profiles", ""));
+        setStatus(status, error.message, "error");
+      }
+    }
+
+    async function runTest(endpoint, label) {
+      const profileId = profileSelect.value;
+      if (!profileId) {
+        setStatus(status, "Choose a profile first.", "error");
+        return;
+      }
+      if (!window.confirm(`Run ${label} on the selected profile? This immediately changes and saves hideout timers.`)) {
+        return;
+      }
+
+      factoryButton.disabled = true;
+      woodsButton.disabled = true;
+      setStatus(status, `Running ${label}...`);
+      try {
+        const result = await request(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ profileId })
+        });
+        setStatus(
+          status,
+          `Saved ${result.progressMinutes.toFixed(2)} minutes of progression. ` +
+          `${result.craftsAdvanced} craft(s) and ${result.upgradesAdvanced} upgrade(s) advanced.`,
+          "success"
+        );
+      } catch (error) {
+        setStatus(status, error.message, "error");
+      } finally {
+        const enabled = Boolean(profileSelect.value);
+        factoryButton.disabled = !enabled;
+        woodsButton.disabled = !enabled;
+      }
+    }
+
+    document.querySelector("#config-form").addEventListener("submit", saveConfig);
+    document.querySelector("#add-map").addEventListener("click", () => addMapRow("", 1));
+    profileSelect.addEventListener("change", () => {
+      const enabled = Boolean(profileSelect.value);
+      factoryButton.disabled = !enabled;
+      woodsButton.disabled = !enabled;
+    });
+    document.querySelector("#refresh").addEventListener("click", loadProfiles);
+    factoryButton.addEventListener("click", () => runTest("/test/forty-seconds", "Factory test"));
+    woodsButton.addEventListener("click", () => runTest("/test/woods-forty-minutes", "Woods test"));
+    loadConfig();
+  </script>
+</body>
+</html>

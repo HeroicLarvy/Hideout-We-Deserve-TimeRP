@@ -1,0 +1,19 @@
+{
+  "baseTimeMultiplier": 7,
+  "dangerThresholdMinutes": 15,
+  "defaultDangerMultiplier": 1,
+  "debug": false,
+  "mapDangerMultipliers": {
+    "labyrinth": 1.75,
+    "labs": 1.65,
+    "streets": 1.55,
+    "factory": 1.45,
+    "reserve": 1.35,
+    "lighthouse": 1.3,
+    "ground_zero": 1.25,
+    "interchange": 1.2,
+    "customs": 1.15,
+    "shoreline": 1.1,
+    "woods": 1.05
+  }
+}
